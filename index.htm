@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="manifest" href="manifest.json">
+<title>الثلث الأخير من الليل - الجزائر</title>
+
+<style>
+:root{
+  --bg:#020617;
+  --card:#0f172a;
+  --accent:#3b82f6;
+  --accent-hover:#2563eb;
+  --text:#e5e7eb;
+  --muted:#94a3b8;
+}
+
+*{box-sizing:border-box}
+
+body{
+  margin:0;
+  min-height:100vh;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  background:radial-gradient(circle at top,#0f172a,#020617 70%);
+  font-family:system-ui,-apple-system,"Segoe UI",sans-serif;
+  color:var(--text);
+}
+
+.box{
+  width:100%;
+  max-width:360px;
+  background:linear-gradient(180deg,#020617,#020617) padding-box,
+             linear-gradient(135deg,#2563eb,#22c55e) border-box;
+  border:1px solid transparent;
+  border-radius:18px;
+  padding:24px 20px;
+  box-shadow:0 20px 40px rgba(0,0,0,.5);
+}
+
+h3{
+  margin:0 0 20px;
+  text-align:center;
+  font-size:1.2rem;
+  letter-spacing:.5px;
+}
+
+label{
+  display:block;
+  font-size:.85rem;
+  color:var(--muted);
+  margin-top:14px;
+}
+
+input,select,button{
+  width:100%;
+  margin-top:6px;
+  padding:10px 12px;
+  border-radius:10px;
+  border:none;
+  outline:none;
+  font-size:.95rem;
+}
+
+input,select{
+  background:#020617;
+  color:var(--text);
+  box-shadow:inset 0 0 0 1px #1e293b;
+}
+
+input:focus,select:focus{
+  box-shadow:inset 0 0 0 1px var(--accent);
+}
+
+button{
+  margin-top:20px;
+  background:linear-gradient(135deg,var(--accent),#22c55e);
+  color:#fff;
+  font-weight:600;
+  cursor:pointer;
+  transition:transform .15s ease,box-shadow .15s ease;
+}
+
+button:hover{
+  transform:translateY(-1px);
+  box-shadow:0 8px 20px rgba(37,99,235,.4);
+}
+
+.result{
+  margin-top:18px;
+  padding:14px;
+  border-radius:12px;
+  background:#020617;
+  box-shadow:inset 0 0 0 1px #1e293b;
+  text-align:center;
+  font-size:.9rem;
+  line-height:1.6;
+}
+
+.result b{
+  display:inline-block;
+  margin-top:4px;
+  font-size:1.05rem;
+  color:#22c55e;
+}
+
+.link{
+  position:fixed;
+  bottom:16px;
+  font-size:.8rem;
+  padding:6px 14px;
+  border-radius:999px;
+  background:#020617;
+  color:var(--muted);
+  text-decoration:none;
+  box-shadow:inset 0 0 0 1px #1e293b;
+}
+</style>
+</head>
+
+<body>
+
+<div class="box">
+  <h3>الثلث الأخير من الليل</h3>
+
+  <select hidden id="city"></select>
+
+
+  <label>الفجر (اختياري للتعديل)</label>
+  <input type="time" id="fajr">
+  <label>المغرب (اختياري للتعديل)</label>
+  <input type="time" id="maghrib">
+
+  <button onclick="fetchTimes()">احسب الآن</button>
+
+  <div class="result" id="result">النتيجة ستظهر هنا</div>
+</div>
+
+<a class="link" href="https://dya-quran.web.app">Quran Web</a>
+
+<script>
+const cities=[
+  {name:"بشار",lat:30.5102939,lon:-2.8125926},
+  {name:"الجزائر العاصمة",lat:36.7525,lon:3.04197},
+  {name:"وهران",lat:35.6971,lon:-0.6359},
+  {name:"قسنطينة",lat:36.365,lon:6.6147}
+];
+
+const sel=document.getElementById("city");
+cities.forEach(c=>sel.innerHTML+=`<option value="${c.lat},${c.lon}">${c.name}</option>`);
+sel.value=`${cities[0].lat},${cities[0].lon}`;
+
+const toMinutes=t=>{
+  const[h,m]=t.split(":").map(Number);
+  return h*60+m;
+};
+
+const formatTime=m=>{
+  m=(m+1440)%1440;
+  return String(Math.floor(m/60)).padStart(2,"0")+":"+String(m%60).padStart(2,"0");
+};
+
+async function fetchTimes(){
+  const[lat,lon]=sel.value.split(",");
+  const today=new Date().toISOString().split("T")[0];
+
+  try{
+    const res=await fetch(`https://api.aladhan.com/v1/timings/${today}?latitude=${lat}&longitude=${lon}&method=3`);
+    const data=await res.json();
+
+    let maghrib=document.getElementById("maghrib").value||data.data.timings.Maghrib;
+    let fajr=document.getElementById("fajr").value||data.data.timings.Fajr;
+
+    let m1=toMinutes(maghrib);
+    let m2=toMinutes(fajr);
+    if(m2<=m1)m2+=1440;
+
+    const night=m2-m1;
+    const lastThirdStart=m2-night/3;
+
+    document.getElementById("result").innerHTML=`
+      المغرب: ${maghrib}<br>
+      الفجر: ${fajr}<br><br>
+      يبدأ الثلث الأخير عند<br>
+      <b>${formatTime(lastThirdStart)}</b><br>
+      وينتهي عند<br>
+      <b>${formatTime(m2)}</b>
+    `;
+  }catch(e){
+    document.getElementById("result").innerText="حدث خطأ في جلب البيانات";
+  }
+}
+
+fetchTimes();
+</script>
+
+<script>
+if("serviceWorker" in navigator){
+  window.addEventListener("load",()=>{
+    navigator.serviceWorker.register("service-worker.js");
+  });
+}
+</script>
+
+</body>
+</html>
