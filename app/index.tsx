@@ -44,7 +44,7 @@ export default function Home() {
   const [result, setResult] = useState("النتيجة ستظهر هنا");
 
   const fetchTimes = async () => {
-    const city = cities[0]; // بشار افتراضيًا
+    const city = cities[0];
     const today = new Date().toISOString().split("T")[0];
 
     try {
